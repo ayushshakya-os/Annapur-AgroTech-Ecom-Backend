@@ -61,6 +61,8 @@ app.post("/upload", upload.single("product"),(req, res)=>{
 });
 
 const paymentRoutes = require("./src/routes/paymentRoutes");
+const searchRoutes = require("./src/routes/searchRoutes");
+
 // Routes
 app.use("/api/auth", require("./src/routes/authRoutes"));
 app.use("/api/products", require("./src/routes/productRoutes"));
@@ -69,6 +71,8 @@ app.use("/api/cart", require("./src/routes/cartRoutes"));
 app.use("/api/orders", require("./src/routes/orderRoutes"));
 
 app.use("/api/payment", paymentRoutes);
+
+app.use("/api/searches", searchRoutes);
 
 
 
