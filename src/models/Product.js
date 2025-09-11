@@ -8,6 +8,11 @@ const productSchema = new mongoose.Schema({
     short_description:{type: String, required: true},
     description:{type: String},
     category:{type:String, required:true},
+    farmerId: {               
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
     createdAt: {type: Date, default: Date.now},
     });
 

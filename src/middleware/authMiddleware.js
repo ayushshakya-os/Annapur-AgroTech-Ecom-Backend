@@ -42,4 +42,29 @@ const blockGuests = (req, res, next) => {
   next();
 };
 
-module.exports = { authMiddleware, restrictTo, blockGuests };
+// helper; check that only negotiation participants (buyer/farmer) can act
+const restrictToNegotiationParticipants = (getNegotiation) => async (req, res, next) => {
+  try {
+    const negotiation = await getNegotiation(req);
+    if (!negotiation) return res.status(404).json({ success: false, error: "Negotiation not found" });
+
+    const userId = String(req.user._id); // normalize logged-in user ID
+    const buyerId = String(negotiation.buyerId); // normalize buyer ID from DB
+    const farmerId = String(negotiation.farmerId); // normalize farmer ID from DB
+
+    if (req.user.role !== "admin" && userId !== buyerId && userId !== farmerId) {
+      console.log("User ID:", userId);
+      console.log("Buyer ID:", buyerId);
+      console.log("Farmer ID:", farmerId);
+      return res.status(403).json({ success: false, error: "Not authorized for this negotiation" });
+    }
+
+    req.negotiation = negotiation; // attach negotiation for controller use
+    next();
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+
+module.exports = { authMiddleware, restrictTo, blockGuests,  restrictToNegotiationParticipants };

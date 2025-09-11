@@ -15,6 +15,7 @@ const errorMiddleware = require("./src/middleware/errorMiddleware");
 const app = express();
 
 app.use(bodyParser.json());
+app.use(express.json({limit: "1mb"}));
 
 app.use(helmet()); // Security headers
 app.use(
@@ -23,7 +24,6 @@ app.use(
     credentials: true,
  })
 );
-app.use(express.json({limit: "1mb"}));
 app.use(loggerMiddleware);
 
 // API Creation
@@ -60,19 +60,19 @@ app.post("/upload", upload.single("product"),(req, res)=>{
     });
 });
 
-const paymentRoutes = require("./src/routes/paymentRoutes");
-const searchRoutes = require("./src/routes/searchRoutes");
 
-// Routes
+//-------------Routes---------------//
+
 app.use("/api/auth", require("./src/routes/authRoutes"));
 app.use("/api/products", require("./src/routes/productRoutes"));
 app.use("/api/users", require("./src/routes/userRoutes"));
 app.use("/api/cart", require("./src/routes/cartRoutes"));
 app.use("/api/orders", require("./src/routes/orderRoutes"));
+app.use("/api/payment", require("./src/routes/paymentRoutes"));
+app.use("/api/searches", require("./src/routes/searchRoutes"));
+app.use("/api/negotiations", require("./src/routes/negotiationRoutes"));
+app.use("/api/bids", require("./src/routes/bidRoutes"));
 
-app.use("/api/payment", paymentRoutes);
-
-app.use("/api/searches", searchRoutes);
 
 
 
