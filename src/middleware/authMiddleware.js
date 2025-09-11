@@ -49,13 +49,10 @@ const restrictToNegotiationParticipants = (getNegotiation) => async (req, res, n
     if (!negotiation) return res.status(404).json({ success: false, error: "Negotiation not found" });
 
     const userId = String(req.user._id); // normalize logged-in user ID
-    const buyerId = String(negotiation.buyerId); // normalize buyer ID from DB
-    const farmerId = String(negotiation.farmerId); // normalize farmer ID from DB
+    const buyerId  = String(negotiation.buyerId._id || negotiation.buyerId);  // normalize buyer ID from DB
+    const farmerId = String(negotiation.farmerId._id || negotiation.farmerId);   // normalize farmer ID from DB
 
     if (req.user.role !== "admin" && userId !== buyerId && userId !== farmerId) {
-      console.log("User ID:", userId);
-      console.log("Buyer ID:", buyerId);
-      console.log("Farmer ID:", farmerId);
       return res.status(403).json({ success: false, error: "Not authorized for this negotiation" });
     }
 
