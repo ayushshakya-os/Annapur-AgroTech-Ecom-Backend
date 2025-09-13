@@ -1,16 +1,66 @@
 const express = require("express");
-const { authMiddleware, blockGuests, restrictToNegotiationParticipants } = require("../middleware/authMiddleware");
-const { placeBid, getBids } = require("../controllers/bidController");
-const Negotiation = require("../models/Negotiation");
-
 const router = express.Router();
+const bidController = require("../controllers/bidController");
+const { authMiddleware, restrictTo, restrictToNegotiationParticipants } = require("../middleware/authMiddleware");
+const {
+  validatePlaceBid,
+  validateCounterBid,
+  validateAcceptBid,
+} = require("../middleware/validateRequest");
 
-// Place bid (buyer or farmer)
-router.post("/", authMiddleware, blockGuests, placeBid);
+// Place a bid (Buyer only)
+router.post(
+  "/place",
+  authMiddleware,
+  restrictTo("buyer"),
+  validatePlaceBid,
+  bidController.placeBid
+);
 
-// Get all bids for a negotiation (participants only)
-router.get("/:negotiationId", authMiddleware, restrictToNegotiationParticipants(
-  async (req) => await Negotiation.findById(req.params.negotiationId)
-), getBids);
+// Counter a bid (Farmer only)
+router.put(
+  "/:id/counter",
+  authMiddleware,
+  restrictTo("farmer"),
+  validateCounterBid,
+  restrictToNegotiationParticipants(async (req) => {
+    const bid = await require("../models/Bid").findById(req.params.id);
+    return bid;
+  }),
+  bidController.counterBid
+);
+
+// Accept a bid (Farmer only)
+router.put(
+  "/:id/accept",
+  authMiddleware,
+  restrictTo("farmer"),
+  validateAcceptBid,
+  restrictToNegotiationParticipants(async (req) => {
+    const bid = await require("../models/Bid").findById(req.params.id);
+    return bid;
+  }),
+  bidController.acceptBid
+);
+
+// Accept a farmer's counter-offer (buyer accepts)
+router.put("/:id/accept-buyer", 
+  authMiddleware, 
+  restrictTo("buyer"), 
+  validateAcceptBid, 
+  restrictToNegotiationParticipants(async (req) => {
+    const bid = await require("../models/Bid").findById(req.params.id);
+    return bid;
+  }), 
+  bidController.acceptBidBuyer
+);
+
+
+// Get all bids for a product (Buyer/Farmer)
+router.get(
+  "/product/:productId",
+  authMiddleware,
+  bidController.getBidsForProduct
+);
 
 module.exports = router;

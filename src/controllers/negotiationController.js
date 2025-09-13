@@ -1,85 +1,44 @@
 const Negotiation = require("../models/Negotiation");
 const Product = require("../models/product");
 
-const startNegotiation = async (req, res) => {
+// Create a negotiation
+exports.createNegotiation = async (req, res) => {
   try {
     const { productId } = req.body;
-    const buyerId = req.user._id;
 
-    const product = await Product.findById(productId);
-    if (!product) return res.status(404).json({ message: "Product not found" });
-
-    // Check if farmerId exists
-    if (!product.farmerId) {
-      return res.status(400).json({ message: "This product is missing farmer info and cannot be negotiated" });
+    if (!productId) {
+      return res.status(400).json({ success: false, msg: "ProductId is required" });
     }
 
-    const negotiation = new Negotiation({
+    // Load product
+    const product = await Product.findById(productId);
+    if (!product || !product.isBiddable) {
+      return res.status(400).json({ success: false, msg: "Product not available for negotiation" });
+    }
+
+    // Check if negotiation already exists
+    let negotiation = await Negotiation.findOne({
       productId,
-      buyerId,
+      buyerId: req.user._id,
       farmerId: product.farmerId,
-      initialPrice: product.price,
+      status: "active",
+    });
+
+    if (negotiation) {
+      return res.status(200).json({ success: true, negotiation, msg: "Existing negotiation found" });
+    }
+
+    // Otherwise create new one
+    negotiation = new Negotiation({
+      productId,
+      buyerId: req.user._id,
+      farmerId: product.farmerId,
+      status: "active",
     });
 
     await negotiation.save();
-
-    res.status(201).json(negotiation);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(201).json({ success: true, negotiation });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
   }
-};
-
-
-const acceptNegotiation = async (req, res) => {
-  try {
-    const negotiation = req.negotiation;
-    negotiation.status = "accepted";
-    negotiation.agreedPrice = req.body.amount || null;
-    await negotiation.save();
-
-    req.io.to(negotiation._id.toString()).emit("negotiationClosed", {
-      negotiationId: negotiation._id,
-      status: negotiation.status,
-      agreedPrice: negotiation.agreedPrice,
-    });
-
-    res.json({ message: "Negotiation accepted", negotiation });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
-const rejectNegotiation = async (req, res) => {
-  try {
-    const negotiation = req.negotiation;
-    negotiation.status = "rejected";
-    await negotiation.save();
-
-    req.io.to(negotiation._id.toString()).emit("negotiationClosed", {
-      negotiationId: negotiation._id,
-      status: negotiation.status,
-    });
-
-    res.json({ message: "Negotiation rejected", negotiation });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
-const getFarmerNegotiations = async (req, res) => {
-  try {
-    const negotiations = await Negotiation.find({ farmerId: req.user._id })
-      .populate("productId")
-      .populate("buyerId");
-    res.json(negotiations);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
-module.exports = {
-  startNegotiation,
-  acceptNegotiation,
-  rejectNegotiation,
-  getFarmerNegotiations,
 };

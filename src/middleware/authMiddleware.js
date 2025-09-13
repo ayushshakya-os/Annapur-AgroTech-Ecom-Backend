@@ -1,6 +1,6 @@
-
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const verifyToken = require("../utils/verifyToken"); // ✅ Added
 
 const authMiddleware = async (req, res, next) => {
   try {
@@ -9,15 +9,16 @@ const authMiddleware = async (req, res, next) => {
       return res.status(401).json({ success: false, error: "No token provided" });
     }
     const token = authHeader.split(" ")[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.decode(token); // ✅ decode instead of verify for guest check
 
     // guests do not exist in DB
-    if (decoded.role === "guest") {
+    if (decoded?.role === "guest") {
       req.user = { _id: decoded.id, role: "guest", email: decoded.email || null };
       return next();
     }
 
-    const user = await User.findById(decoded.id).select("-password");
+    // ✅ Use shared verifyToken helper for authenticated users
+    const user = await verifyToken(token);
     if (!user) {
       return res.status(401).json({ success: false, error: "User not found" });
     }
@@ -66,5 +67,4 @@ const restrictToNegotiationParticipants = (getNegotiation) => async (req, res, n
   }
 };
 
-
-module.exports = { authMiddleware, restrictTo, blockGuests,  restrictToNegotiationParticipants };
+module.exports = { authMiddleware, restrictTo, blockGuests, restrictToNegotiationParticipants };

@@ -13,6 +13,9 @@ const productSchema = new mongoose.Schema({
     ref: "User",
     required: true,
   },
+    isBiddable: {
+        type: Boolean, default: true
+    },
     createdAt: {type: Date, default: Date.now},
     });
 

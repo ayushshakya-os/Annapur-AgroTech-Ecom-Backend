@@ -14,7 +14,22 @@ const errorMiddleware = require("./src/middleware/errorMiddleware");
 
 const app = express();
 
-app.use(bodyParser.json());
+const { Server } = require("socket.io");
+const http = require("http");
+
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: process.env.FRONTEND_URL || "*",
+    credentials: true,
+  },
+});
+
+// Inject io into req
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
 app.use(express.json({limit: "1mb"}));
 
 app.use(helmet()); // Security headers
@@ -70,12 +85,12 @@ app.use("/api/cart", require("./src/routes/cartRoutes"));
 app.use("/api/orders", require("./src/routes/orderRoutes"));
 app.use("/api/payment", require("./src/routes/paymentRoutes"));
 app.use("/api/searches", require("./src/routes/searchRoutes"));
-app.use("/api/negotiations", require("./src/routes/negotiationRoutes"));
 app.use("/api/bids", require("./src/routes/bidRoutes"));
-
+app.use("/api/notifications", require("./src/routes/notificationRoutes"));
+app.use("/api/negotiations", require("./src/routes/negotiationRoutes"));
 
 
 
 app.use(errorMiddleware);
 
-module.exports = app;
+module.exports = {app, server, io};

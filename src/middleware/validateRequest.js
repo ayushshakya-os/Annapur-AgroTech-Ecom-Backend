@@ -102,6 +102,42 @@ const validateCartUpdate = [
   },
 ];
 
+   
+// ✅ Bid validation: Place a bid
+const validatePlaceBid = [
+  body("productId").isMongoId().withMessage("Valid productId is required"),
+  body("offeredPrice").isFloat({ gt: 0 }).withMessage("Offered price must be a positive number"),
+  body("negotiationId").isString().trim().notEmpty().withMessage("Negotiation ID is required"),
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty())
+      return res.status(400).json({ success: false, errors: errors.array() });
+    next();
+  },
+];
+
+// ✅ Bid validation: Counter a bid
+const validateCounterBid = [
+  body("offeredPrice").isFloat({ gt: 0 }).withMessage("Counter price must be a positive number"),
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty())
+      return res.status(400).json({ success: false, errors: errors.array() });
+    next();
+  },
+];
+
+// ✅ Bid validation: Accept a bid
+const validateAcceptBid = [
+  param("id").isMongoId().withMessage("Valid bid ID is required"),
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty())
+      return res.status(400).json({ success: false, errors: errors.array() });
+    next();
+  },
+];
+
 module.exports = {
   validateCreateOrder,
   validateRegister,
@@ -110,4 +146,7 @@ module.exports = {
   validateCartUpdate,
   validateAddress,
   validateUpdateAddress,
+  validatePlaceBid,
+  validateCounterBid,
+  validateAcceptBid
 };

@@ -1,32 +1,30 @@
 const mongoose = require("mongoose");
 
-const negotiationSchema = new mongoose.Schema(
-  {
-    productId: { 
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Product",
-        required: true,
-    },
-    farmerId: { 
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: true,
-    },
-    buyerId: { 
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: true,
-    },
-    initialPrice: {
-        type: Number,
-        required: true,
-    },
-    status: { 
-        type: String,
-        enum: ["pending", "accepted", "rejected", "ongoing"],
-        default: "ongoing",
-    },
+const negotiationSchema = new mongoose.Schema({
+  productId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Product",
+    required: true,
   },
-  { timestamps: true });
+  buyerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+  farmerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+  status: {
+    type: String,
+    enum: ["active", "closed"],
+    default: "active",
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  }
+});
 
 module.exports = mongoose.model("Negotiation", negotiationSchema);
