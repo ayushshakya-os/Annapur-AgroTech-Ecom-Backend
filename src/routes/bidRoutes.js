@@ -34,6 +34,31 @@ router.put(
   bidController.counterBid
 );
 
+// Buyer counters a bid (Buyer only)
+router.put(
+  "/:id/counter-buyer",
+  authMiddleware,
+  restrictTo("buyer"),
+  validateCounterBid,
+  restrictToNegotiationParticipants(async (req) => {
+    const bid = await require("../models/Bid").findById(req.params.id);
+    return bid;
+  }),
+  bidController.buyerCounterBid
+);
+
+// Buyer rejects an offer (Buyer only)
+router.put(
+  "/:id/reject-buyer",
+  authMiddleware,
+  restrictTo("buyer"),
+  restrictToNegotiationParticipants(async (req) => {
+    const bid = await require("../models/Bid").findById(req.params.id);
+    return bid;
+  }),
+  bidController.rejectBidBuyer
+);
+
 // Accept a bid (Farmer only)
 router.put(
   "/:id/accept",

@@ -88,6 +88,89 @@ exports.counterBid = async (req, res) => {
   }
 };
 
+// Buyer counters an offer (Buyer only)
+// Buyer can send a new offeredPrice (e.g., after farmer countered).
+// We treat buyer counter as a new buyer offer -> set status to "pending" so farmer can respond.
+exports.buyerCounterBid = async (req, res) => {
+  try {
+    const { offeredPrice } = req.body;
+    const bid = await Bid.findById(req.params.id);
+
+    if (!bid) {
+      return res.status(404).json({ success: false, error: "Bid not found" });
+    }
+
+    // Do not allow actions on already accepted/rejected bids
+    if (bid.status === "accepted" || bid.status === "rejected") {
+      return res
+        .status(400)
+        .json({ success: false, error: "Cannot counter a finalized bid" });
+    }
+
+    // Update offered price and mark as pending (waiting for farmer)
+    bid.offeredPrice = offeredPrice;
+    bid.status = "pending";
+    await bid.save();
+
+    // Notify farmer about buyer's counter-offer
+    await Notification.create({
+      userId: bid.farmerId,
+      type: "counter_offer",
+      message: `Buyer updated the offer to Rs. ${offeredPrice}`,
+    });
+
+    req.io?.to(`user_${bid.farmerId}`).emit("bidNotification", {
+      type: "counter_offer",
+      message: `Buyer updated the offer to Rs. ${offeredPrice}`,
+      bid,
+    });
+
+    req.io?.to(bid.negotiationId).emit("bidUpdate", bid);
+
+    res.json({ success: true, bid });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// Buyer rejects an offer (Buyer only)
+exports.rejectBidBuyer = async (req, res) => {
+  try {
+    const bid = await Bid.findById(req.params.id);
+    if (!bid) {
+      return res.status(404).json({ success: false, error: "Bid not found" });
+    }
+
+    if (bid.status === "accepted" || bid.status === "rejected") {
+      return res
+        .status(400)
+        .json({ success: false, error: "Bid already finalized" });
+    }
+
+    bid.status = "rejected";
+    await bid.save();
+
+    // Notify farmer
+    await Notification.create({
+      userId: bid.farmerId,
+      type: "bid_rejected",
+      message: `Buyer rejected the offer for Rs. ${bid.offeredPrice}`,
+    });
+
+    req.io?.to(`user_${bid.farmerId}`).emit("bidNotification", {
+      type: "bid_rejected",
+      message: `Buyer rejected the offer for Rs. ${bid.offeredPrice}`,
+      bid,
+    });
+
+    req.io?.to(bid.negotiationId).emit("bidUpdate", bid);
+
+    res.json({ success: true, bid });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
 // Farmer accepts a buyer's offer
 exports.acceptBid = async (req, res) => {
   try {
