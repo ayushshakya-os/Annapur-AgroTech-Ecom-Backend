@@ -1,14 +1,15 @@
-
-const Product = require("../models/product");
+const Product = require("../models/Product");
 const Search = require("../models/Search");
 
 exports.searchProducts = async (req, res) => {
-    try{
-        const { query } = req.body;
-        if(!query){
-            return res.status(400).json({success:false, error: "Query is required"});
-        }
-        const results = await Product.find({
+  try {
+    const { query } = req.body;
+    if (!query) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Query is required" });
+    }
+    const results = await Product.find({
       name: { $regex: query, $options: "i" },
     });
 
@@ -20,7 +21,7 @@ exports.searchProducts = async (req, res) => {
     res.json({ success: true, results });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
-    }
+  }
 };
 
 // Get all searches by the logged-in user
@@ -29,7 +30,7 @@ exports.getUserSearches = async (req, res, next) => {
     const searches = await Search.find({ user: req.user.id }).sort({
       createdAt: -1,
     });
-    res.json({ success: true, searches});
+    res.json({ success: true, searches });
   } catch (error) {
     next(error);
   }

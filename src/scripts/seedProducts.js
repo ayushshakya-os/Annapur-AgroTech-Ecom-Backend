@@ -3,7 +3,7 @@ const path = require("path");
 require("dotenv").config({ path: path.join(__dirname, "../../.env") });
 
 const connectDB = require("../config/db");
-const Product = require("../models/product");
+const Product = require("../models/Product");
 const User = require("../models/User");
 const products = require("../data/market-products.json");
 
@@ -42,7 +42,8 @@ const products = require("../data/market-products.json");
         ...p,
         name: p.name?.trim() || `Product ${idx + 1}`,
         category: p.category?.trim() || "Uncategorized",
-        short_description: p.short_description?.trim() || "No description available",
+        short_description:
+          p.short_description?.trim() || "No description available",
         price,
         farmerId: farmer._id, // 👈 assign farmerId
       };
