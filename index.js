@@ -7,6 +7,8 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 const helmet = require("helmet");
 const multer = require("multer");
+const { Server } = require("socket.io");
+const http = require("http");
 
 // Middlewares
 const loggerMiddleware = require("./src/middleware/loggerMiddleware");
@@ -14,15 +16,20 @@ const errorMiddleware = require("./src/middleware/errorMiddleware");
 
 const app = express();
 
-const { Server } = require("socket.io");
-const http = require("http");
+// Create HTTP server for Socket.IO
+const server = http.createServer(app);
 
+// --------------------
+// 🔧 CORS CONFIGURATION
+// --------------------
+
+// Define allowed origins
 const allowedOrigins = [
-  "http://localhost:3000",
-  "https://annapur-agro-tech-platform.vercel.app/",
+  "http://localhost:3000", // local dev
+  process.env.FRONTEND_URL, // production frontend (from .env)
 ];
 
-const server = http.createServer(app);
+// Setup Socket.io CORS
 const io = new Server(server, {
   cors: {
     origin: allowedOrigins,
@@ -30,43 +37,64 @@ const io = new Server(server, {
   },
 });
 
-// Inject io into req
+// Middleware to attach `io` to requests
 app.use((req, res, next) => {
   req.io = io;
   next();
 });
+
+// JSON limit
 app.use(express.json({ limit: "1mb" }));
 
-app.use(helmet()); // Security headers
+// Security headers
+app.use(helmet());
+
+// Proper CORS middleware (no wildcard + credentials-safe)
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "*",
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like Postman) or allowed origins
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.error("❌ CORS blocked:", origin);
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   })
 );
+
+// Custom logger
 app.use(loggerMiddleware);
 
-// API Creation
+// --------------------
+// 🌐 ROUTES
+// --------------------
+
 app.get("/", (req, res) => {
   res.send("Welcome to Annapur Backend!");
 });
 
-//Image Upload setup
+// --------------------
+// 📁 IMAGE UPLOAD SETUP
+// --------------------
+
 const uploadDir = path.join(__dirname, "upload", "images");
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
-//Image Storage Engine
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),
   filename: (req, file, cb) =>
     cb(null, `product_${Date.now()}${path.extname(file.originalname)}`),
 });
 
-// Multer in-memory storage
 const upload = multer({ storage });
 
-//Creating Upload Endpoint for images
+// Serve static images
 app.use("/images", express.static(uploadDir));
+
+// Upload endpoint
 app.post("/upload", upload.single("product"), (req, res) => {
   if (!req.file)
     return res.status(400).json({ success: false, error: "No file uploaded" });
@@ -80,7 +108,7 @@ app.post("/upload", upload.single("product"), (req, res) => {
   });
 });
 
-//-------------Routes---------------//
+// 🧩 API ROUTES
 
 app.use("/api/auth", require("./src/routes/authRoutes"));
 app.use("/api/products", require("./src/routes/productRoutes"));
@@ -93,6 +121,7 @@ app.use("/api/bids", require("./src/routes/bidRoutes"));
 app.use("/api/notifications", require("./src/routes/notificationRoutes"));
 app.use("/api/negotiations", require("./src/routes/negotiationRoutes"));
 
+// Error handler
 app.use(errorMiddleware);
 
 module.exports = { app, server, io };
