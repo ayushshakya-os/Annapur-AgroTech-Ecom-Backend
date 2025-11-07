@@ -1,5 +1,5 @@
 const Negotiation = require("../models/Negotiation");
-const Product = require("../models/product");
+const Product = require("../models/Product");
 
 // Create a negotiation
 exports.createNegotiation = async (req, res) => {
@@ -7,13 +7,17 @@ exports.createNegotiation = async (req, res) => {
     const { productId } = req.body;
 
     if (!productId) {
-      return res.status(400).json({ success: false, msg: "ProductId is required" });
+      return res
+        .status(400)
+        .json({ success: false, msg: "ProductId is required" });
     }
 
     // Load product
     const product = await Product.findById(productId);
     if (!product || !product.isBiddable) {
-      return res.status(400).json({ success: false, msg: "Product not available for negotiation" });
+      return res
+        .status(400)
+        .json({ success: false, msg: "Product not available for negotiation" });
     }
 
     // Check if negotiation already exists
@@ -25,7 +29,11 @@ exports.createNegotiation = async (req, res) => {
     });
 
     if (negotiation) {
-      return res.status(200).json({ success: true, negotiation, msg: "Existing negotiation found" });
+      return res.status(200).json({
+        success: true,
+        negotiation,
+        msg: "Existing negotiation found",
+      });
     }
 
     // Otherwise create new one
