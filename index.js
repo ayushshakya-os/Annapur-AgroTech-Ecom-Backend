@@ -1,11 +1,11 @@
-require('dotenv').config(); 
+require("dotenv").config();
 
 const path = require("path");
 const fs = require("fs");
 const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
-const helmet = require('helmet');
+const helmet = require("helmet");
 const multer = require("multer");
 
 // Middlewares
@@ -17,10 +17,15 @@ const app = express();
 const { Server } = require("socket.io");
 const http = require("http");
 
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://annapur-agro-tech-platform.vercel.app/",
+];
+
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || "*",
+    origin: allowedOrigins,
     credentials: true,
   },
 });
@@ -30,14 +35,14 @@ app.use((req, res, next) => {
   req.io = io;
   next();
 });
-app.use(express.json({limit: "1mb"}));
+app.use(express.json({ limit: "1mb" }));
 
 app.use(helmet()); // Security headers
 app.use(
-    cors({
-      origin: process.env.FRONTEND_URL || "*",
+  cors({
+    origin: process.env.FRONTEND_URL || "*",
     credentials: true,
- })
+  })
 );
 app.use(loggerMiddleware);
 
@@ -50,31 +55,30 @@ app.get("/", (req, res) => {
 const uploadDir = path.join(__dirname, "upload", "images");
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
-
 //Image Storage Engine
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, uploadDir),
-    filename: (req,file, cb)=>
-         cb(null, `product_${Date.now()}${path.extname(file.originalname)}`),
-    
+  destination: (req, file, cb) => cb(null, uploadDir),
+  filename: (req, file, cb) =>
+    cb(null, `product_${Date.now()}${path.extname(file.originalname)}`),
 });
 
 // Multer in-memory storage
 const upload = multer({ storage });
 
 //Creating Upload Endpoint for images
-app.use('/images',express.static(uploadDir));
-app.post("/upload", upload.single("product"),(req, res)=>{
+app.use("/images", express.static(uploadDir));
+app.post("/upload", upload.single("product"), (req, res) => {
+  if (!req.file)
+    return res.status(400).json({ success: false, error: "No file uploaded" });
 
-  if (!req.file) return res.status(400).json({ success: false, error: "No file uploaded" });
-    
-    const imageUrl = `${req.protocol}://${req.get("host")}/images/${req.file.filename}`;
-    res.json({
-        success: true,
-        image_url: imageUrl
-    });
+  const imageUrl = `${req.protocol}://${req.get("host")}/images/${
+    req.file.filename
+  }`;
+  res.json({
+    success: true,
+    image_url: imageUrl,
+  });
 });
-
 
 //-------------Routes---------------//
 
@@ -89,8 +93,6 @@ app.use("/api/bids", require("./src/routes/bidRoutes"));
 app.use("/api/notifications", require("./src/routes/notificationRoutes"));
 app.use("/api/negotiations", require("./src/routes/negotiationRoutes"));
 
-
-
 app.use(errorMiddleware);
 
-module.exports = {app, server, io};
+module.exports = { app, server, io };
