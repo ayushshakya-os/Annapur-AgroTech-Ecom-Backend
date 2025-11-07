@@ -1,7 +1,6 @@
-
 const mongoose = require("mongoose");
 const Order = require("../models/order");
-const Cart = require("../models/Cart");
+const Cart = require("../models/cart");
 
 // Helper order id (fallback if pre-save missing)
 const generateOrderId = () =>
@@ -14,21 +13,29 @@ exports.createOrder = async (req, res) => {
     const { customer, shippingAddress, paymentMethod } = req.body;
 
     if (!customer || !shippingAddress) {
-      return res.status(400).json({ success: false, error: "Customer and shippingAddress required" });
+      return res.status(400).json({
+        success: false,
+        error: "Customer and shippingAddress required",
+      });
     }
 
-    const cart = await Cart.findOne({ userId: new mongoose.Types.ObjectId(userId) });
+    const cart = await Cart.findOne({
+      userId: new mongoose.Types.ObjectId(userId),
+    });
     if (!cart || cart.items.length === 0) {
       return res.status(400).json({ success: false, error: "Cart is empty" });
     }
 
     // Calculate from cart (server-authoritative)
-    const subtotal = cart.items.reduce((s, it) => s + it.price * it.quantity, 0);
+    const subtotal = cart.items.reduce(
+      (s, it) => s + it.price * it.quantity,
+      0
+    );
     const shipping = subtotal >= 1000 ? 0 : 50;
     const tax = subtotal * 0.1;
     const total = subtotal + shipping + tax;
 
-    const orderItems = cart.items.map(it => ({
+    const orderItems = cart.items.map((it) => ({
       productId: it.productId,
       name: it.name,
       image: it.image,
@@ -57,12 +64,12 @@ exports.createOrder = async (req, res) => {
         state: shippingAddress.state,
       },
       paymentMethod,
-      paymentStatus: 
-      paymentMethod === "cod" 
-      ? "pending" 
-      : paymentMethod === "esewa"
-      ? "pending"
-      : "completed",
+      paymentStatus:
+        paymentMethod === "cod"
+          ? "pending"
+          : paymentMethod === "esewa"
+          ? "pending"
+          : "completed",
       status: "pending",
     });
 
@@ -82,7 +89,9 @@ exports.createOrder = async (req, res) => {
 exports.getUserOrders = async (req, res) => {
   try {
     const { userId } = req.params;
-    const orders = await Order.find({ userId: new mongoose.Types.ObjectId(userId) })
+    const orders = await Order.find({
+      userId: new mongoose.Types.ObjectId(userId),
+    })
       .sort({ createdAt: -1 })
       .populate("items.productId");
     res.json({ success: true, orders });
@@ -96,7 +105,8 @@ exports.getOrderById = async (req, res) => {
   try {
     const { orderId } = req.params;
     const order = await Order.findOne({ orderId }).populate("items.productId");
-    if (!order) return res.status(404).json({ success: false, error: "Order not found" });
+    if (!order)
+      return res.status(404).json({ success: false, error: "Order not found" });
     res.json({ success: true, order });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -117,7 +127,8 @@ exports.updateOrderStatus = async (req, res) => {
       { status, updatedAt: Date.now() },
       { new: true, runValidators: true }
     );
-    if (!order) return res.status(404).json({ success: false, error: "Order not found" });
+    if (!order)
+      return res.status(404).json({ success: false, error: "Order not found" });
 
     res.json({ success: true, message: "Order status updated", order });
   } catch (error) {
